@@ -25,6 +25,8 @@
     // {% if msg %}
     //     alert("{{ msg }}")
     // {% endif %}
+    function dosen() {
+        window.location.href = "/login"}
     function sign_in() {
       let username = $("#input-username").val();
       let password = $("#input-password").val();
@@ -48,15 +50,15 @@
       console.log(username, password);
       $.ajax({
         type: "POST",
-        url: "/sign_in",
+        url: "/sign_inadmin",
         data: {
           username_give: username,
           password_give: password,
         },
         success: function (response) {
           if (response["result"] === "success") {
-            $.cookie("mytoken", response["token"], { path: "/" });
-            window.location.replace("/");
+            $.cookie("mytoken", response["token"], { path: "/homeadmin" });
+            window.location.replace("/homeadmin");
           } else {
             alert(response["msg"]);
           }
@@ -106,7 +108,7 @@
       $("#help-id").addClass("is-loading");
       $.ajax({
         type: "POST",
-        url: "/sign_up/check_dup",
+        url: "/sign_upadmin/check_dup",
         data: {
           username_give: username,
         },
@@ -187,14 +189,14 @@
       }
       $.ajax({
         type: "POST",
-        url: "/sign_up/save",
+        url: "/sign_upadmin/save",
         data: {
           username_give: username,
           password_give: password,
         },
         success: function (response) {
           alert("Your are signed up! Nice!");
-          window.location.replace("/login");
+          window.location.replace("/loginadmin");
         },
       });
     }
@@ -216,6 +218,14 @@
         <img src="{{ url_for('static', filename='logo_large.png') }}" />
       </a>
     </div>
+    <div class="navbar-end">
+      <div class="navbar-item">
+        <div class="buttons" onclick="dosen()">
+          <a class="level-item button is-sparta">
+            <strong>Login sebagai user</strong>
+          </a>
+        </div>
+      </div>
   </nav>
     <section>
       <div

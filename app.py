@@ -37,12 +37,29 @@ def home():
     except jwt.exceptions.DecodeError:
         return redirect(url_for("login", msg="anda harus login dulu"))
 
-
+@app.route("/homeadmin")
+def homeadmin():
+    token_receive = request.cookies.get("mytoken")
+    try:
+        payload = jwt.decode(token_receive, SECRET_KEY, algorithms=["HS256"])
+        user_info = db.admin.find_one({"username": payload["id"]})
+        return render_template("indexadmin.html", user_info=user_info)
+        # return render_template("index.html")
+    except jwt.ExpiredSignatureError:
+        return redirect(url_for("loginadmin", msg="Your token has expired"))
+    except jwt.exceptions.DecodeError:
+        return redirect(url_for("loginadmin", msg="anda harus login dulu"))
 
 @app.route("/login")
 def login():
     msg = request.args.get("msg")
     return render_template("login.html", msg=msg)
+
+@app.route("/loginadmin")
+def loginadmin():
+    msg = request.args.get("msg")
+    return render_template("loginadmin.html", msg=msg)
+
 
 
 @app.route("/user/<username>")
@@ -60,6 +77,23 @@ def user(username):
         return render_template("user.html", user_info=user_info, status=status)
     except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
         return redirect(url_for("home"))
+    
+@app.route("/admin/<username>")
+def admin(username):
+    # an endpoint for retrieving a user's profile information
+    # and all of their posts
+    token_receive = request.cookies.get("mytoken")
+    try:
+        payload = jwt.decode(token_receive, SECRET_KEY, algorithms=["HS256"])
+        # if this is my own profile, True
+        # if this is somebody else's profile, False
+        status = username == payload["id"]
+
+        user_info = db.admin.find_one({"username": username}, {"_id": False})
+        return render_template("user.html", user_info=user_info, status=status)
+    except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
+        return redirect(url_for("homeadmin"))
+
 
 
 @app.route("/sign_in", methods=["POST"])
@@ -97,6 +131,43 @@ def sign_in():
                 "msg": "We could not find a user with that id/password combination",
             }
         )
+    
+@app.route("/sign_inadmin", methods=["POST"])
+def sign_inadmin():
+    # Sign in
+    username_receive = request.form["username_give"]
+    password_receive = request.form["password_give"]
+    pw_hash = hashlib.sha256(password_receive.encode("utf-8")).hexdigest()
+    result = db.admin.find_one(
+        {
+            "username": username_receive,
+            "password": pw_hash,
+        }
+    )
+    if result:
+        payload = {
+            "id": username_receive,
+            # the token will be valid for 24 hours
+            "exp": datetime.utcnow() + timedelta(seconds=60 * 60 * 24),
+        }
+        token = jwt.encode(payload, SECRET_KEY, algorithm="HS256").decode("utf-8")
+
+        return jsonify(
+            {
+                "result": "success",
+                "token": token,
+            }
+        )
+    # Let's also handle the case where the id and
+    # password combination cannot be found
+    else:
+        return jsonify(
+            {
+                "result": "fail",
+                "msg": "We could not find a user with that id/password combination",
+            }
+        )
+
 
 
 @app.route("/sign_up/save", methods=["POST"])
@@ -115,12 +186,35 @@ def sign_up():
     db.users.insert_one(doc)
     return jsonify({"result": "success"})
 
+@app.route("/sign_upadmin/save", methods=["POST"])
+def sign_upadmin():
+    username_receive = request.form["username_give"]
+    password_receive = request.form["password_give"]
+    password_hash = hashlib.sha256(password_receive.encode("utf-8")).hexdigest()
+    doc = {
+        "username": username_receive,  # id
+        "password": password_hash,  # password
+        "profile_name": username_receive,  # user's name is set to their id by default
+        "profile_pic": "",  # profile image file name
+        "profile_pic_real": "profile_pics/profile_placeholder.png",  # a default profile image
+        "profile_info": "",  # a profile description
+    }
+    db.admin.insert_one(doc)
+    return jsonify({"result": "success"})
+
 
 @app.route("/sign_up/check_dup", methods=["POST"])
 def check_dup():
     username_receive = request.form["username_give"]
     exists = bool(db.users.find_one({"username": username_receive}))
     return jsonify({"result": "success", "exists": exists})
+
+@app.route("/sign_upadmin/check_dup", methods=["POST"])
+def check_dupadmin():
+    username_receive = request.form["username_give"]
+    exists = bool(db.admin.find_one({"username": username_receive}))
+    return jsonify({"result": "success", "exists": exists})
+
 
 
 @app.route("/update_profile", methods=["POST"])
@@ -178,6 +272,57 @@ def posting():
         return jsonify({"result": "success", "msg": "Posting successful!"})
     except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
         return redirect(url_for("home"))
+    
+# @app.route("/postingadmin", methods=["POST"])
+# def postingadmin():
+#     token_receive = request.cookies.get("mytoken")
+#     try:
+#         payload = jwt.decode(token_receive, SECRET_KEY, algorithms=["HS256"])
+#         # We should create a new post here
+#         user_info = db.admin.find_one({"username": payload["id"]})
+#         comment_receive = request.form["comment_give"]
+#         date_receive = request.form["date_give"]
+
+#         today = datetime.now()
+#         mytime = today.strftime('%Y-%m-%d-%H-%M-%S')
+#         file = request.files['file_give']
+#         extension = file.filename.split('.')[-1]
+#         filename = f'static/feed/post-{mytime}.{extension}'
+#         file.save(filename)
+        
+#         doc = {
+#             "username": user_info["username"],
+#             "profile_name": user_info["profile_name"],
+#             "profile_pic_real": user_info["profile_pic_real"],
+#             "comment": comment_receive,
+#             "date": date_receive,
+#             "foto":filename
+#         }
+#         db.pos.insert_one(doc)
+#         return jsonify({"result": "success", "msg": "Posting successful!"})
+#     except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
+#         return redirect(url_for("homeadmin"))
+
+@app.route("/postingadmin", methods=["POST"])
+def postingadmin():
+    token_receive = request.cookies.get("mytoken")
+    try:
+        payload = jwt.decode(token_receive, SECRET_KEY, algorithms=["HS256"])
+        # We should create a new post here
+        user_info = db.admin.find_one({"username": payload["id"]})
+        comment_receive = request.form["comment_give"]
+        date_receive = request.form["date_give"]
+        doc = {
+            "username": user_info["username"],
+            "profile_name": user_info["profile_name"],
+            "profile_pic_real": user_info["profile_pic_real"],
+            "comment": comment_receive,
+            "date": date_receive,
+        }
+        db.postingan.insert_one(doc)
+        return jsonify({"result": "success", "msg": "Posting successful!"})
+    except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
+        return redirect(url_for("homeadmin"))
 
 
 @app.route("/get_posts", methods=["GET"])
@@ -235,6 +380,62 @@ def get_posts():
         )
     except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
         return redirect(url_for("home"))
+    
+@app.route("/get_postsadmin", methods=["GET"])
+def get_postsadmin():
+    token_receive = request.cookies.get("mytoken")
+    try:
+        payload = jwt.decode(token_receive, SECRET_KEY, algorithms=["HS256"])
+
+        username_receive = request.args.get("username_give")
+        if username_receive == "":
+            posts = list(db.postsadmin.find({}).sort("date", -1).limit(20))
+        else:
+            posts = list(
+                db.postsadmin.find({"username": username_receive}).sort("date", -1).limit(20)
+            )
+
+        for post in posts:
+            post["_id"] = str(post["_id"])
+            post["count_heart"] = db.likesadmin.count_documents(
+                {"post_id": post["_id"], "type": "heart"}
+            )
+            
+            post["count_star"] = db.likesadmin.count_documents(
+                {"post_id": post["_id"], "type": "star"}
+            )
+            
+            post["count_thumbsup"] = db.likesadmin.count_documents(
+                {"post_id": post["_id"], "type": "thumbsup"}
+            )
+            
+            post["heart_by_me"] = bool(
+                db.likesadmin.find_one(
+                    {"post_id": post["_id"], "type": "heart", "username": payload["id"]}
+                )
+            )
+            
+            post["star_by_me"] = bool(
+                db.likesadmin.find_one(
+                    {"post_id": post["_id"], "type": "star", "username": payload["id"]}
+                )
+            )
+
+            
+            post["thumbsup_by_me"] = bool(
+                db.likesamin.find_one(
+                    {"post_id": post["_id"], "type": "thumbsup", "username": payload["id"]}
+                )
+            )
+        return jsonify(
+            {
+                "result": "success",
+                "msg": "Successful fetched all posts",
+                "posts": posts,
+            }
+        )
+    except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
+        return redirect(url_for("homeadmin"))
 
 
 @app.route("/update_like", methods=["POST"])
@@ -262,6 +463,32 @@ def update_like():
         return jsonify({"result": "success", "msg": "updated", "count": count})
     except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
         return redirect(url_for("home"))
+    
+@app.route("/update_likeadmin", methods=["POST"])
+def update_likeadmin():
+    token_receive = request.cookies.get("mytoken")
+    try:
+        payload = jwt.decode(token_receive, SECRET_KEY, algorithms=["HS256"])
+        # We should change the like count for the post here
+        user_info = db.admin.find_one({"username": payload["id"]})
+        post_id_receive = request.form["post_id_give"]
+        type_receive = request.form["type_give"]
+        action_receive = request.form["action_give"]
+        doc = {
+            "post_id": post_id_receive,
+            "username": user_info["username"],
+            "type": type_receive,
+        }
+        if action_receive == "like":
+            db.likesadmin.insert_one(doc)
+        else:
+            db.likesadmin.delete_one(doc)
+        count = db.likesadmin.count_documents(
+            {"post_id": post_id_receive, "type": type_receive}
+        )
+        return jsonify({"result": "success", "msg": "updated", "count": count})
+    except (jwt.ExpiredSignatureError, jwt.exceptions.DecodeError):
+        return redirect(url_for("homeadmin"))
 
 
 @app.route("/about", methods=["GET"])

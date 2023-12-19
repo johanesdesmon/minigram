@@ -24,6 +24,75 @@ function post() {
     })
 }
 
+
+function postadmin() {
+    let comment = $("#textarea-post").val()
+    let today = new Date().toISOString()
+    $.ajax({
+        type: "POST",
+        url: "/postingadmin",
+        data: {
+            comment_give: comment,
+            date_give: today
+        },
+        success: function (response) {
+            $("#modal-post").removeClass("is-active")
+            window.location.reload()
+        }
+    })
+}
+// function postadmin() {
+
+//     let comment = $("#textarea-post").val()
+//     let today = new Date().toISOString()
+//     let file = $("#image").prop("files")[0];
+//     let form_data = new FormData();
+//     console.log(comment)
+//     console.log(today)
+//     console.log(file)
+//     console.log(form_data)
+//     form_data.append('file_give', file);
+//     form_data.append('comment_give', comment);
+//     form_data.append('date_give', today);
+
+//     for (const value of form_data.values()) {
+//         console.log(value);
+//     }
+
+//     $.ajax({
+//         type: "POST",
+//         url: "/postingadmin",
+//         data: form_data,
+//         contentType: false,
+//         processData: false,
+//         success: function (response) {
+//             $("#modal-post").removeClass("is-active")
+//             console.log(response)
+//             // alert(response['msg']);
+//             // window.location.reload()
+//         }
+//     })
+//     // form_data.append('file_give', file);
+//     // form_data.append('comment_give', comment);
+//     // form_data.append('date_give', today);
+
+
+//     // $.ajax({
+//     //     type: "POST",
+//     //     url: "/postingadmin",
+//     //     data: form_data,
+//     //     contentType : false,
+//     //     processData : false,
+//     //     success: function (response) {
+//     //         console.log(response)
+//     //         $("#modal-post").removeClass("is-active")
+//     //         // alert(response['msg']);
+//     //         // window.location.reload()
+//     //     }
+//     // })
+// }
+
+
 function get_posts(username) {
     // code untuk menapilkan post by user
     if (username === undefined){

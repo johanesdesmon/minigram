@@ -25,6 +25,8 @@
     // {% if msg %}
     //     alert("{{ msg }}")
     // {% endif %}
+    function dosen() {
+            window.location.href = "/loginadmin"}
     function sign_in() {
       let username = $("#input-username").val();
       let password = $("#input-password").val();
@@ -215,6 +217,15 @@
       <a class="navbar-item" href="/">
         <img src="{{ url_for('static', filename='logo_large.png') }}" />
       </a>
+    </div>
+    <div class="navbar-end">
+      <div class="navbar-item">
+        <div class="buttons" onclick="dosen()">
+          <a class="level-item button is-sparta">
+            <strong>Login sebagai admin</strong>
+          </a>
+        </div>
+      </div>
     </div>
   </nav>
     <section>
